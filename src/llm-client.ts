@@ -108,11 +108,27 @@ class LLMClient {
                 response += chunk.content;
             }
 
-            return response.trim();
+            // Clean special tokens from response
+            response = this.cleanResponse(response.trim());
+
+            return response;
         } catch (error) {
             console.error('Error completing LLM request:', error);
             throw error;
         }
+    }
+
+    /**
+     * Clean special tokens and formatting from LLM response
+     */
+    private cleanResponse(text: string): string {
+        // Remove common LLM special tokens
+        return text
+            .replace(/<\|channel\|>[^<]*<\|message\|>/g, '') // <|channel|>...<|message|>
+            .replace(/<\|end\|>/g, '')
+            .replace(/<\|start\|>/g, '')
+            .replace(/<\|[^>]+\|>/g, '') // Any other <|...|> tokens
+            .trim();
     }
 
     /**
