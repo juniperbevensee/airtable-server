@@ -28,6 +28,28 @@ export class QueryAgent extends BaseAgent {
 
     private tableName: string;
 
+    /**
+     * Extract JSON from LLM response, handling extra text or special tokens
+     */
+    private extractJSON(text: string): any {
+        // Try to find JSON object in the response
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+            try {
+                return JSON.parse(jsonMatch[0]);
+            } catch (e) {
+                this.log(`Failed to parse extracted JSON: ${e}`);
+            }
+        }
+
+        // If no JSON found, return defaults
+        return {
+            fields: [],
+            filterByFormula: '',
+            maxRecords: 10,
+        };
+    }
+
     getName(): string {
         return 'QueryAgent';
     }
@@ -63,19 +85,21 @@ export class QueryAgent extends BaseAgent {
             this.log('Processing query request...');
 
             // Use LLM to extract what fields the user wants and any filters
-            const extractionPrompt = `Given this user request: "${message}"
+            const extractionPrompt = `Extract query parameters from: "${message}"
 
-Extract the query parameters in JSON format:
+Return ONLY this JSON (no other text):
 {
-  "fields": ["field1", "field2"],  // which fields to show (empty array for all)
-  "filterByFormula": "",             // Airtable formula (empty if none)
-  "maxRecords": 10                   // how many records to return
+  "fields": [],
+  "filterByFormula": "",
+  "maxRecords": 10
 }
 
-Respond with ONLY the JSON object.`;
+JSON:`;
 
             const llmResponse = await llmClient.complete(extractionPrompt);
-            const queryParams = JSON.parse(llmResponse);
+            this.log(`Raw LLM response: ${llmResponse.substring(0, 200)}...`);
+
+            const queryParams = this.extractJSON(llmResponse);
 
             this.log(`Query params: ${JSON.stringify(queryParams)}`);
 
