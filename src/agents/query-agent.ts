@@ -9,7 +9,7 @@ import Airtable from 'airtable';
 import { BaseAgent } from '../base-agent';
 import { llmClient } from '../llm-client';
 import { config } from '../config';
-import { extractTableFromMessage } from '../airtable-schema';
+import { extractTableFromMessage, resolveTableName } from '../airtable-schema';
 
 export class QueryAgent extends BaseAgent {
     private airtable: Airtable.Base;
@@ -37,13 +37,23 @@ export class QueryAgent extends BaseAgent {
         const jsonMatch = text.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
             try {
-                return JSON.parse(jsonMatch[0]);
+                const parsed = JSON.parse(jsonMatch[0]);
+                // Validate that we got the expected structure
+                if (typeof parsed === 'object' && parsed !== null) {
+                    return {
+                        fields: parsed.fields || [],
+                        filterByFormula: parsed.filterByFormula || '',
+                        maxRecords: parsed.maxRecords || 10,
+                    };
+                }
             } catch (e) {
                 this.log(`Failed to parse extracted JSON: ${e}`);
+                this.log(`Raw JSON attempt: ${jsonMatch[0].substring(0, 100)}...`);
             }
         }
 
         // If no JSON found, return defaults
+        this.log('No valid JSON found, using defaults');
         return {
             fields: [],
             filterByFormula: '',
@@ -105,10 +115,13 @@ export class QueryAgent extends BaseAgent {
             const detectedTable = await extractTableFromMessage(message);
             const targetTable = detectedTable || this.tableName;
 
+            // Resolve table ID to friendly name for logging
+            const friendlyTableName = await resolveTableName(targetTable);
+
             if (detectedTable) {
-                this.log(`Detected table from message: ${detectedTable}`);
+                this.log(`Detected table from message: ${friendlyTableName}`);
             } else {
-                this.log(`Using default table: ${this.tableName}`);
+                this.log(`Using default table: ${friendlyTableName}`);
             }
 
             // Use LLM to extract what fields the user wants and any filters
@@ -149,10 +162,10 @@ JSON:`;
                 });
 
             if (records.length === 0) {
-                return `No records found in the "${targetTable}" table matching your criteria.`;
+                return `No records found in the "${friendlyTableName}" table matching your criteria.`;
             }
 
-            this.log(`Found ${records.length} records in "${targetTable}"`);
+            this.log(`Found ${records.length} records in "${friendlyTableName}"`);
 
             // Format results
             const formattedRecords = records.map((record) => {
