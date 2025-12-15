@@ -124,13 +124,21 @@ app.post('/api/chat', async (req: Request, res: Response) => {
             return;
         }
 
-        console.log(`📨 User message: "${lastUserMessage.content}"\n`);
+        // Clean the message: extract actual content after metadata prefix
+        // Format: "[username (id) at timestamp]:\nactual message"
+        let cleanMessage = lastUserMessage.content;
+        const metadataPattern = /^\[.*?\]:\s*/;
+        if (metadataPattern.test(cleanMessage)) {
+            cleanMessage = cleanMessage.replace(metadataPattern, '').trim();
+        }
+
+        console.log(`📨 User message: "${cleanMessage}"\n`);
 
         // Try to find an agent that can handle this message
         let handlingAgent: BaseAgent | null = null;
 
         for (const agent of agents) {
-            if (await agent.canHandle(lastUserMessage.content)) {
+            if (await agent.canHandle(cleanMessage)) {
                 handlingAgent = agent;
                 break;
             }
@@ -153,7 +161,7 @@ app.post('/api/chat', async (req: Request, res: Response) => {
         console.log(`🤖 Routing to: ${handlingAgent.getName()}\n`);
 
         // Process the message with the selected agent
-        const responseContent = await handlingAgent.process(lastUserMessage.content);
+        const responseContent = await handlingAgent.process(cleanMessage);
 
         // Format response in Ollama format
         const response: OllamaResponse = {

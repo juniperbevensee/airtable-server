@@ -33,6 +33,31 @@ class LLMClient {
     }
 
     /**
+     * Get the first loaded model from LM Studio
+     * Returns null if no models are loaded
+     */
+    private async getLoadedModel(): Promise<any> {
+        if (!this.client) {
+            return null;
+        }
+
+        try {
+            // List all loaded models
+            const loadedModels = await this.client.llm.listLoaded();
+
+            if (loadedModels.length > 0) {
+                console.log(`✅ Found ${loadedModels.length} loaded model(s), using: ${loadedModels[0]?.path || 'first one'}`);
+                return loadedModels[0];
+            }
+
+            return null;
+        } catch (error) {
+            console.error('Error listing loaded models:', error);
+            return null;
+        }
+    }
+
+    /**
      * Send a prompt to the LLM and get a response
      *
      * @param prompt - The prompt to send
@@ -45,14 +70,21 @@ class LLMClient {
         }
 
         try {
-            // Use cached model if available, otherwise load it
-            // Note: llm.load() will reuse an already-loaded model if it exists
+            // Use cached model if available
             if (!this.cachedModel) {
-                console.log(`🔄 Loading model: ${config.lmStudio.modelName}`);
-                this.cachedModel = await this.client.llm.load(config.lmStudio.modelName, {
-                    verbose: false, // Disable verbose loading logs
-                });
-                console.log(`✅ Model ready`);
+                // First try to use an already-loaded model
+                this.cachedModel = await this.getLoadedModel();
+
+                if (this.cachedModel) {
+                    console.log(`🔄 Using already-loaded model from LM Studio`);
+                } else {
+                    // No model loaded, try to load the configured one
+                    console.log(`🔄 No model loaded, loading: ${config.lmStudio.modelName}`);
+                    this.cachedModel = await this.client.llm.load(config.lmStudio.modelName, {
+                        verbose: false,
+                    });
+                    console.log(`✅ Model ready`);
+                }
             }
 
             // Build messages array
