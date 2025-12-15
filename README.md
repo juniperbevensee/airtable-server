@@ -43,6 +43,7 @@ npm install
 ```
 
 2. Configure environment variables:
+'cp .env.example .env'
    - Edit `.env` file with your credentials:
 ```bash
 # Get Airtable API key: https://airtable.com/create/tokens
