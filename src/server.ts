@@ -12,6 +12,7 @@ import { BaseAgent } from './base-agent';
 import { QueryAgent } from './agents/query-agent';
 import { CreateAgent } from './agents/create-agent';
 import { ChatRequest, ChatResponse, OllamaRequest, OllamaResponse } from './types';
+import { fetchBaseTables } from './airtable-schema';
 
 // Create Express app
 const app = express();
@@ -198,6 +199,10 @@ async function startServer() {
         console.log('🔌 Connecting to LM Studio...');
         await llmClient.connect();
 
+        // Fetch available tables from Airtable
+        console.log('📋 Fetching available tables...');
+        const tables = await fetchBaseTables();
+
         // Start listening
         app.listen(config.port, () => {
             console.log('\n' + '='.repeat(50));
@@ -206,6 +211,7 @@ async function startServer() {
             console.log(`📍 Server: http://localhost:${config.port}`);
             console.log(`🧠 LM Studio: ${config.lmStudio.host}:${config.lmStudio.port}`);
             console.log(`📊 Airtable Base: ${config.airtable.baseId}`);
+            console.log(`📋 Default Table: ${config.airtable.tableName}`);
             console.log('='.repeat(50) + '\n');
             console.log('Available endpoints:');
             console.log('  GET  /health');
@@ -215,6 +221,14 @@ async function startServer() {
             agents.forEach((agent) => {
                 console.log(`  - ${agent.getName()}: ${agent.getDescription()}`);
             });
+
+            if (tables.length > 0) {
+                console.log('\nAvailable tables in base:');
+                tables.forEach((table) => {
+                    console.log(`  - ${table.name} (${table.id})`);
+                });
+            }
+
             console.log('\n');
         });
     } catch (error) {
