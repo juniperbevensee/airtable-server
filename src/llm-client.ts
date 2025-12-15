@@ -122,12 +122,15 @@ class LLMClient {
      * Clean special tokens and formatting from LLM response
      */
     private cleanResponse(text: string): string {
-        // Remove common LLM special tokens
+        // Remove common LLM special tokens and thinking patterns
         return text
             .replace(/<\|channel\|>[^<]*<\|message\|>/g, '') // <|channel|>...<|message|>
             .replace(/<\|end\|>/g, '')
             .replace(/<\|start\|>/g, '')
             .replace(/<\|[^>]+\|>/g, '') // Any other <|...|> tokens
+            .replace(/^(Need to|Let me|I need to|I'll|I will)[^.!?]*[.!?]\s*/i, '') // Remove thinking starts
+            .replace(/^assistant\s*/i, '') // Remove "assistant" label
+            .replace(/^(user|system)\s*:/gi, '') // Remove role labels
             .trim();
     }
 
