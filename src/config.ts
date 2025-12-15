@@ -18,6 +18,7 @@ export const config = {
     lmStudio: {
         host: process.env.LM_STUDIO_HOST || 'localhost',
         port: parseInt(process.env.LM_STUDIO_PORT || '1234', 10),
+        modelName: process.env.LM_STUDIO_MODEL || 'olmo-3-32b-think',
     },
 
     // Airtable settings
