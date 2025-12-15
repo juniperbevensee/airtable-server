@@ -11,9 +11,20 @@ export interface ChatMessage {
     content: string;
 }
 
-// The request coming into our server
+// The request coming into our server (OpenAI format)
 export interface ChatRequest {
     messages: ChatMessage[];
+}
+
+// Ollama request format (alternative)
+export interface OllamaRequest {
+    model?: string;
+    messages: ChatMessage[];
+    stream?: boolean;
+    options?: {
+        temperature?: number;
+        num_predict?: number;
+    };
 }
 
 // The response we send back
@@ -27,6 +38,14 @@ export interface ChatResponse {
         message: ChatMessage;
         finish_reason: string;
     }>;
+}
+
+// Ollama response format
+export interface OllamaResponse {
+    model: string;
+    created_at: string;
+    message: ChatMessage;
+    done: boolean;
 }
 
 // Airtable record structure (you can customize based on your base)
