@@ -11,7 +11,7 @@ import { llmClient } from './llm-client';
 import { BaseAgent } from './base-agent';
 import { QueryAgent } from './agents/query-agent';
 import { CreateAgent } from './agents/create-agent';
-import { ChatRequest, ChatResponse } from './types';
+import { ChatRequest, ChatResponse, OllamaRequest, OllamaResponse } from './types';
 
 // Create Express app
 const app = express();
@@ -106,6 +106,78 @@ app.post('/v1/chat/completions', async (req: Request, res: Response) => {
 });
 
 /**
+ * Ollama-compatible endpoint
+ * Accepts Ollama-formatted requests and returns Ollama-formatted responses
+ */
+app.post('/api/chat', async (req: Request, res: Response) => {
+    try {
+        const ollamaRequest = req.body as OllamaRequest;
+
+        console.log(`\n📤 Ollama request received`);
+
+        // Get the LAST user message (ignore conversation context)
+        const userMessages = ollamaRequest.messages.filter((msg) => msg.role === 'user');
+        const lastUserMessage = userMessages[userMessages.length - 1];
+
+        if (!lastUserMessage) {
+            res.status(400).json({ error: 'No user message found in request' });
+            return;
+        }
+
+        console.log(`📨 User message: "${lastUserMessage.content}"\n`);
+
+        // Try to find an agent that can handle this message
+        let handlingAgent: BaseAgent | null = null;
+
+        for (const agent of agents) {
+            if (await agent.canHandle(lastUserMessage.content)) {
+                handlingAgent = agent;
+                break;
+            }
+        }
+
+        if (!handlingAgent) {
+            const errorResponse: OllamaResponse = {
+                model: ollamaRequest.model || 'airtable-agent',
+                created_at: new Date().toISOString(),
+                message: {
+                    role: 'assistant',
+                    content: 'No agent could handle this request. Try asking to find, create, update, or delete Airtable records.',
+                },
+                done: true,
+            };
+            res.json(errorResponse);
+            return;
+        }
+
+        console.log(`🤖 Routing to: ${handlingAgent.getName()}\n`);
+
+        // Process the message with the selected agent
+        const responseContent = await handlingAgent.process(lastUserMessage.content);
+
+        // Format response in Ollama format
+        const response: OllamaResponse = {
+            model: ollamaRequest.model || 'airtable-agent',
+            created_at: new Date().toISOString(),
+            message: {
+                role: 'assistant',
+                content: responseContent,
+            },
+            done: true,
+        };
+
+        console.log(`✅ Response sent\n`);
+        res.json(response);
+    } catch (error) {
+        console.error('❌ Error processing request:', error);
+        res.status(500).json({
+            error: 'Internal server error',
+            details: error instanceof Error ? error.message : 'Unknown error',
+        });
+    }
+});
+
+/**
  * Start the server
  */
 async function startServer() {
@@ -129,7 +201,8 @@ async function startServer() {
             console.log('='.repeat(50) + '\n');
             console.log('Available endpoints:');
             console.log('  GET  /health');
-            console.log('  POST /v1/chat/completions');
+            console.log('  POST /v1/chat/completions (OpenAI format)');
+            console.log('  POST /api/chat (Ollama format)');
             console.log('\nRegistered agents:');
             agents.forEach((agent) => {
                 console.log(`  - ${agent.getName()}: ${agent.getDescription()}`);
