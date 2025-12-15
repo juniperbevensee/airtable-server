@@ -65,8 +65,24 @@ export class QueryAgent extends BaseAgent {
     async canHandle(message: string): Promise<boolean> {
         const lowerMessage = message.toLowerCase();
 
-        // Simple keyword matching
-        const queryKeywords = ['find', 'search', 'show', 'get', 'list', 'what', 'who', 'which'];
+        // Simple keyword matching for queries and detail requests
+        const queryKeywords = [
+            'find',
+            'search',
+            'show',
+            'get',
+            'list',
+            'what',
+            'who',
+            'which',
+            'give',
+            'tell me',
+            'details',
+            'more information',
+            'info on',
+            'about',
+            'describe',
+        ];
 
         const hasKeyword = queryKeywords.some((keyword) => lowerMessage.includes(keyword));
 
@@ -104,6 +120,11 @@ Return ONLY this JSON (no other text):
   "filterByFormula": "",
   "maxRecords": 10
 }
+
+Notes:
+- If asking for details about a specific item (e.g., "Human User Interface"), use filterByFormula to search for it
+- Example: "details on X" -> {"filterByFormula": "SEARCH('X', {Name})", "maxRecords": 1}
+- For "all records", leave filterByFormula empty
 
 JSON:`;
 
