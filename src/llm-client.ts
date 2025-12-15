@@ -11,6 +11,7 @@ import { config } from './config';
 class LLMClient {
     private client: LMStudioClient | null = null;
     private isConnected: boolean = false;
+    private cachedModel: any = null; // Cache the loaded model
 
     /**
      * Connect to LM Studio
@@ -44,8 +45,12 @@ class LLMClient {
         }
 
         try {
-            // Get the currently loaded model
-            const model = await this.client.llm.load(config.lmStudio.modelName);
+            // Use cached model if available, otherwise load it
+            if (!this.cachedModel) {
+                console.log(`🔄 Loading model: ${config.lmStudio.modelName}`);
+                this.cachedModel = await this.client.llm.load(config.lmStudio.modelName);
+                console.log(`✅ Model loaded successfully`);
+            }
 
             // Build messages array
             const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [];
@@ -57,7 +62,7 @@ class LLMClient {
             messages.push({ role: 'user', content: prompt });
 
             // Send the completion request
-            const prediction = model.respond(messages, {
+            const prediction = this.cachedModel.respond(messages, {
                 temperature: 0.7,
                 maxTokens: 1000,
             });
