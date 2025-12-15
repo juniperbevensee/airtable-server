@@ -123,15 +123,26 @@ class LLMClient {
      */
     private cleanResponse(text: string): string {
         // Remove common LLM special tokens and thinking patterns
-        return text
+        let cleaned = text
             .replace(/<\|channel\|>[^<]*<\|message\|>/g, '') // <|channel|>...<|message|>
             .replace(/<\|end\|>/g, '')
             .replace(/<\|start\|>/g, '')
-            .replace(/<\|[^>]+\|>/g, '') // Any other <|...|> tokens
-            .replace(/^(Need to|Let me|I need to|I'll|I will)[^.!?]*[.!?]\s*/i, '') // Remove thinking starts
-            .replace(/^assistant\s*/i, '') // Remove "assistant" label
-            .replace(/^(user|system)\s*:/gi, '') // Remove role labels
-            .trim();
+            .replace(/<\|[^>]+\|>/g, ''); // Any other <|...|> tokens
+
+        // Remove everything before "assistant" label if it appears
+        const assistantIndex = cleaned.toLowerCase().indexOf('assistant');
+        if (assistantIndex > 0 && assistantIndex < 200) {
+            // Only if "assistant" appears near the start (within 200 chars)
+            cleaned = cleaned.substring(assistantIndex + 'assistant'.length);
+        }
+
+        // Remove thinking patterns and role labels
+        cleaned = cleaned
+            .replace(/^(Need to|Need|Let me|I need to|I'll|I will)[^.!?]*[.!?]\s*/i, '')
+            .replace(/^assistant\s*/i, '')
+            .replace(/^(user|system)\s*:/gi, '');
+
+        return cleaned.trim();
     }
 
     /**
