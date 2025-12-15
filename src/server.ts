@@ -11,6 +11,7 @@ import { llmClient } from './llm-client';
 import { BaseAgent } from './base-agent';
 import { QueryAgent } from './agents/query-agent';
 import { CreateAgent } from './agents/create-agent';
+import { ListTablesAgent } from './agents/list-tables-agent';
 import { ChatRequest, ChatResponse, OllamaRequest, OllamaResponse } from './types';
 import { fetchBaseTables } from './airtable-schema';
 
@@ -22,7 +23,9 @@ const app = express();
 app.use(express.json());
 
 // Array of all available agents
+// Note: Order matters! ListTablesAgent should be first to catch table queries
 const agents: BaseAgent[] = [
+    new ListTablesAgent(),
     new QueryAgent(),
     new CreateAgent(),
     // Add more agents here as you create them!

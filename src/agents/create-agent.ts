@@ -6,6 +6,7 @@ import Airtable from 'airtable';
 import { BaseAgent } from '../base-agent';
 import { llmClient } from '../llm-client';
 import { config } from '../config';
+import { extractTableFromMessage } from '../airtable-schema';
 
 export class CreateAgent extends BaseAgent {
     private airtable: Airtable.Base;
@@ -49,6 +50,16 @@ export class CreateAgent extends BaseAgent {
         try {
             this.log('Processing create request...');
 
+            // Try to extract table name from the message
+            const detectedTable = await extractTableFromMessage(message);
+            const targetTable = detectedTable || this.tableName;
+
+            if (detectedTable) {
+                this.log(`Detected table from message: ${detectedTable}`);
+            } else {
+                this.log(`Using default table: ${this.tableName}`);
+            }
+
             // Use LLM to extract the fields and values to create
             const extractionPrompt = `Given this user request: "${message}"
 
@@ -67,10 +78,10 @@ Response: {"fields": {"Name": "John Smith", "Email": "john@example.com"}}`;
             const llmResponse = await llmClient.complete(extractionPrompt);
             const recordData = JSON.parse(llmResponse);
 
-            this.log(`Creating record with fields: ${JSON.stringify(recordData.fields)}`);
+            this.log(`Creating record in "${targetTable}" with fields: ${JSON.stringify(recordData.fields)}`);
 
             // Create the record in Airtable
-            const createdRecord = await this.airtable(this.tableName).create([
+            const createdRecord = await this.airtable(targetTable).create([
                 {
                     fields: recordData.fields,
                 },
@@ -82,7 +93,7 @@ Response: {"fields": {"Name": "John Smith", "Email": "john@example.com"}}`;
                 throw new Error('Failed to create record');
             }
 
-            return `✅ Successfully created record!\n\nID: ${record.id}\nFields: ${JSON.stringify(record.fields, null, 2)}`;
+            return `✅ Successfully created record in "${targetTable}"!\n\nID: ${record.id}\nFields: ${JSON.stringify(record.fields, null, 2)}`;
         } catch (error) {
             this.log(`Error: ${error}`);
             return `Sorry, I encountered an error while creating the record: ${error}`;

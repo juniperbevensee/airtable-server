@@ -55,3 +55,40 @@ export async function resolveTableName(tableNameOrId: string): Promise<string> {
 
     return tableNameOrId;
 }
+
+/**
+ * Extract table name from a user message
+ * Looks for patterns like "in the Tasks table" or "from Projects"
+ */
+export async function extractTableFromMessage(message: string): Promise<string | null> {
+    const tables = await fetchBaseTables();
+
+    if (tables.length === 0) {
+        return null;
+    }
+
+    const lowerMessage = message.toLowerCase();
+
+    // Check for explicit table mentions: "in the X table", "from X table", "in X", etc.
+    for (const table of tables) {
+        const lowerTableName = table.name.toLowerCase();
+
+        // Patterns to match
+        const patterns = [
+            `in the ${lowerTableName} table`,
+            `from the ${lowerTableName} table`,
+            `in ${lowerTableName} table`,
+            `from ${lowerTableName} table`,
+            `in the ${lowerTableName}`,
+            `from the ${lowerTableName}`,
+            `in ${lowerTableName}`,
+            `from ${lowerTableName}`,
+        ];
+
+        if (patterns.some((pattern) => lowerMessage.includes(pattern))) {
+            return table.name;
+        }
+    }
+
+    return null;
+}
