@@ -89,6 +89,11 @@ curl -X POST http://localhost:3000/v1/chat/completions \
   }'
 ```
 
+### Set up daemon
+two different endpoints depending on structure of request:
+  POST /v1/chat/completions (OpenAI format)
+  POST /api/chat (Ollama format)
+
 ## 🛠️ Project Structure
 
 ```
