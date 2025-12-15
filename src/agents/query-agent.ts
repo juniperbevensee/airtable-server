@@ -9,6 +9,7 @@ import Airtable from 'airtable';
 import { BaseAgent } from '../base-agent';
 import { llmClient } from '../llm-client';
 import { config } from '../config';
+import { extractTableFromMessage } from '../airtable-schema';
 
 export class QueryAgent extends BaseAgent {
     private airtable: Airtable.Base;
@@ -84,6 +85,16 @@ export class QueryAgent extends BaseAgent {
         try {
             this.log('Processing query request...');
 
+            // Try to extract table name from the message
+            const detectedTable = await extractTableFromMessage(message);
+            const targetTable = detectedTable || this.tableName;
+
+            if (detectedTable) {
+                this.log(`Detected table from message: ${detectedTable}`);
+            } else {
+                this.log(`Using default table: ${this.tableName}`);
+            }
+
             // Use LLM to extract what fields the user wants and any filters
             const extractionPrompt = `Extract query parameters from: "${message}"
 
@@ -106,7 +117,7 @@ JSON:`;
             // Query Airtable
             const records: any[] = [];
 
-            await this.airtable(this.tableName)
+            await this.airtable(targetTable)
                 .select({
                     maxRecords: queryParams.maxRecords || 10,
                     filterByFormula: queryParams.filterByFormula || '',
@@ -117,8 +128,10 @@ JSON:`;
                 });
 
             if (records.length === 0) {
-                return 'No records found matching your criteria.';
+                return `No records found in the "${targetTable}" table matching your criteria.`;
             }
+
+            this.log(`Found ${records.length} records in "${targetTable}"`);
 
             // Format results
             const formattedRecords = records.map((record) => {
