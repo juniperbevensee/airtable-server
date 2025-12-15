@@ -13,7 +13,7 @@ import { config } from '../config';
 export class QueryAgent extends BaseAgent {
     private airtable: Airtable.Base;
 
-    constructor(tableName: string = 'Table 1') {
+    constructor(tableName?: string) {
         super();
 
         // Initialize Airtable connection
@@ -23,7 +23,7 @@ export class QueryAgent extends BaseAgent {
         });
 
         this.airtable = Airtable.base(config.airtable.baseId as string);
-        this.tableName = tableName;
+        this.tableName = tableName || config.airtable.tableName;
     }
 
     private tableName: string;
