@@ -46,10 +46,13 @@ class LLMClient {
 
         try {
             // Use cached model if available, otherwise load it
+            // Note: llm.load() will reuse an already-loaded model if it exists
             if (!this.cachedModel) {
                 console.log(`🔄 Loading model: ${config.lmStudio.modelName}`);
-                this.cachedModel = await this.client.llm.load(config.lmStudio.modelName);
-                console.log(`✅ Model loaded successfully`);
+                this.cachedModel = await this.client.llm.load(config.lmStudio.modelName, {
+                    verbose: false, // Disable verbose loading logs
+                });
+                console.log(`✅ Model ready`);
             }
 
             // Build messages array
