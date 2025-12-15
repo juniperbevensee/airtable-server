@@ -45,7 +45,7 @@ class LLMClient {
 
         try {
             // Get the currently loaded model
-            const model = await this.client.llm.load('local');
+            const model = await this.client.llm.load(config.lmStudio.modelName);
 
             // Build messages array
             const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [];
