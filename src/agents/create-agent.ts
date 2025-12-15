@@ -11,7 +11,7 @@ export class CreateAgent extends BaseAgent {
     private airtable: Airtable.Base;
     private tableName: string;
 
-    constructor(tableName: string = 'Table 1') {
+    constructor(tableName?: string) {
         super();
 
         Airtable.configure({
@@ -19,7 +19,7 @@ export class CreateAgent extends BaseAgent {
         });
 
         this.airtable = Airtable.base(config.airtable.baseId as string);
-        this.tableName = tableName;
+        this.tableName = tableName || config.airtable.tableName;
     }
 
     getName(): string {
